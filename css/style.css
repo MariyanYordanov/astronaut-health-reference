@@ -1,0 +1,400 @@
+/*
+  AstroVitals - styles
+  License: MIT (see LICENSE)
+  AI disclosure: drafted with the help of Claude (Anthropic), reviewed by the team.
+
+  Contents:
+    1. Variables (colors, spacing)
+    2. Base page styles
+    3. Header and footer
+    4. Layout grid and panels
+    5. Body map
+    6. Form
+    7. Status panel
+    8. Chart
+    9. Helpers
+   10. Small screens
+*/
+
+/* ---------- 1. Variables ---------- */
+/* Change a color here and it changes everywhere in the app. */
+:root {
+  --bg: #0b1020;            /* page background (deep space blue) */
+  --panel: #151c33;         /* panel background */
+  --panel-border: #2a3558;
+  --text: #e8ecf8;
+  --text-muted: #9aa5c4;
+  --accent: #5cc8ff;        /* buttons, links, focus outline */
+
+  /* Status colors: used by the status panel AND the body map */
+  --status-green: #3ddc84;
+  --status-yellow: #ffcc33;
+  --status-red: #ff5a5a;
+  --status-none: #5b6688;   /* no data yet */
+
+  --radius: 12px;
+  --gap: 20px;
+}
+
+/* ---------- 2. Base page styles ---------- */
+* {
+  box-sizing: border-box;   /* padding does not make elements wider */
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+}
+
+h1, h2, h3 {
+  margin: 0 0 8px;
+  line-height: 1.2;
+}
+
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1rem; }
+
+p { margin: 0 0 12px; }
+
+/* Visible outline for keyboard users */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- 3. Header and footer ---------- */
+.app-header {
+  padding: 24px var(--gap) 16px;
+  text-align: center;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.app-header h1 {
+  font-size: 2rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+
+.tagline {
+  color: var(--text-muted);
+}
+
+.mission-info {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.mission-info strong {
+  color: var(--text);
+}
+
+.app-footer {
+  padding: 20px var(--gap);
+  border-top: 1px solid var(--panel-border);
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ---------- 4. Layout grid and panels ---------- */
+/* Two columns on wide screens:
+     body map | form
+     status   | chart                                  */
+.app-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--gap);
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: var(--gap);
+}
+
+.hint {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* ---------- 5. Body map ---------- */
+#body-map {
+  display: flex;
+  justify-content: center;
+  min-height: 420px;        /* keeps the space reserved before the SVG exists */
+}
+
+#body-map svg {
+  height: 420px;
+  width: auto;
+  max-width: 100%;
+}
+
+/* The silhouette behind the organs (not clickable) */
+.body-outline {
+  fill: #222b4a;
+  stroke: var(--panel-border);
+  stroke-width: 1.5;
+}
+
+/* Every clickable organ in the SVG gets class="organ".
+   JavaScript adds one status class to it after each check-in. */
+.organ {
+  fill: var(--status-none);
+  stroke: var(--bg);
+  stroke-width: 1.5;
+  cursor: pointer;
+  transition: fill 0.3s, opacity 0.2s;
+}
+
+.organ:hover,
+.organ:focus-visible {
+  opacity: 0.75;
+}
+
+.organ.selected {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.organ.status-green  { fill: var(--status-green); }
+.organ.status-yellow { fill: var(--status-yellow); }
+.organ.status-red    { fill: var(--status-red); }
+
+.organ-details {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--panel-border);
+}
+
+.organ-details p:last-child {
+  margin-bottom: 0;
+}
+
+/* ---------- 6. Form ---------- */
+fieldset {
+  border: 0;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+label {
+  display: block;
+  margin: 12px 0 4px;
+  font-size: 0.9rem;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+}
+
+/* Systolic / diastolic side by side */
+.bp-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+details {
+  margin: 12px 0;
+}
+
+summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+button {
+  padding: 10px 18px;
+  font: inherit;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  cursor: pointer;
+}
+
+button[type="submit"] {
+  color: var(--bg);
+  background: var(--accent);
+}
+
+button[type="reset"] {
+  color: var(--accent);
+  background: transparent;
+}
+
+button:hover {
+  opacity: 0.85;
+}
+
+/* Demo tools under the form */
+.data-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--panel-border);
+}
+
+button.secondary {
+  padding: 6px 12px;
+  font-weight: 400;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  background: transparent;
+  border-color: var(--panel-border);
+}
+
+/* Yellow information box (simulated data, storage problem) */
+.notice {
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--status-yellow);
+  font-size: 0.9rem;
+}
+
+/* ---------- 7. Status panel ---------- */
+/* JavaScript adds status-green / status-yellow / status-red to #overall-status.
+   The text label always says the status too - never rely on color alone. */
+.overall-status {
+  padding: 14px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  border-left: 8px solid var(--status-none);
+  background: var(--bg);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.overall-status.status-green  { border-left-color: var(--status-green); }
+.overall-status.status-yellow { border-left-color: var(--status-yellow); }
+.overall-status.status-red    { border-left-color: var(--status-red); }
+
+.status-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+}
+
+/* One row per reading; the colored dot comes from ::before */
+.status-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.status-list li::before {
+  content: "";
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--status-none);
+}
+
+.status-list li.status-green::before  { background: var(--status-green); }
+.status-list li.status-yellow::before { background: var(--status-yellow); }
+.status-list li.status-red::before    { background: var(--status-red); }
+
+.guidance ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.ground-alert {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 2px solid var(--status-red);
+  background: rgba(255, 90, 90, 0.12);
+}
+
+/* ---------- 8. Chart ---------- */
+.chart-panel select {
+  width: auto;
+  margin-bottom: 12px;
+}
+
+.chart-panel label {
+  display: inline;
+  margin-right: 8px;
+}
+
+/* Chart.js needs a positioned parent with a fixed height */
+.chart-wrapper {
+  position: relative;
+  height: 300px;
+}
+
+/* ---------- 9. Helpers ---------- */
+/* Hidden on screen, still read by screen readers */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Make sure the HTML "hidden" attribute always wins */
+[hidden] {
+  display: none !important;
+}
+
+/* ---------- 10. Small screens ---------- */
+/* One column on phones and narrow windows */
+@media (max-width: 800px) {
+  .app-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Sources list in the footer */
+.sources {
+  max-width: 800px;
+  margin: 0 auto 12px;
+  text-align: left;
+}
+
+.sources a {
+  color: var(--accent);
+}

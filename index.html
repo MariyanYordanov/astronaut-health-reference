@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<!--
+  AstroVitals - Astronaut Health Self-Check (reference implementation)
+  NASA Space Apps Challenge 2026
+  Challenge: Create Health Monitoring Software for Astronauts on Space Missions
+
+  License: MIT (see LICENSE)
+  AI disclosure: parts of this code were drafted with the help of Claude (Anthropic)
+  and reviewed by the team. See README.md for details.
+
+  IMPORTANT: This app supports self-assessment only. It does NOT diagnose
+  any medical condition.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AstroVitals - Astronaut Health Self-Check</title>
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="app-header">
+    <h1>AstroVitals</h1>
+    <p class="tagline">Daily health self-check for long-duration space missions</p>
+
+    <!-- Mission context: filled in by JavaScript later -->
+    <div class="mission-info">
+      <span>Mission day: <strong id="mission-day">--</strong></span>
+      <span>Last check-in: <strong id="last-checkin">--</strong></span>
+    </div>
+  </header>
+
+  <main class="app-main">
+
+    <!-- ===================== BODY MAP ===================== -->
+    <!-- The clickable SVG human figure will be placed inside #body-map.
+         Each organ (heart, lungs, brain, bones, muscles) will be a separate
+         SVG element with a data-organ attribute, so CSS can color it and
+         JS can react to clicks. -->
+    <section class="panel body-map-panel" aria-labelledby="body-map-title">
+      <h2 id="body-map-title">Body Map</h2>
+      <p class="hint">Click an organ to see related readings and space hazards.</p>
+
+      <div id="body-map">
+        <!-- Original simple figure drawn for this project (no external artwork).
+             viewBox = our own coordinate system: 200 wide, 440 tall.
+             Colors come from css/style.css (.body-outline and .organ). -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 440"
+             role="group" aria-label="Human body map">
+
+          <!-- Body silhouette: decoration only, not clickable -->
+          <g class="body-outline" aria-hidden="true">
+            <circle cx="100" cy="40" r="28"/>                      <!-- head -->
+            <rect x="90" y="64" width="20" height="18"/>           <!-- neck -->
+            <rect x="36" y="82" width="20" height="150" rx="10"
+                  transform="rotate(6 46 82)"/>                    <!-- arm -->
+            <rect x="144" y="82" width="20" height="150" rx="10"
+                  transform="rotate(-6 154 82)"/>                  <!-- arm -->
+            <rect x="70" y="210" width="27" height="212" rx="13"/> <!-- leg -->
+            <rect x="103" y="210" width="27" height="212" rx="13"/><!-- leg -->
+            <path d="M58 90 Q58 78 70 78 H130 Q142 78 142 90
+                     L134 205 Q134 236 100 236 Q66 236 66 205 Z"/> <!-- torso -->
+          </g>
+
+          <!-- Clickable organs. Each one is a <g> with:
+                 class="organ"      -> styling + status color
+                 data-organ="..."   -> JavaScript reads this to know what was clicked
+                 tabindex/role      -> also usable with the keyboard -->
+          <g class="organ" data-organ="brain" tabindex="0" role="button" aria-label="Brain">
+            <title>Brain</title>
+            <ellipse cx="100" cy="34" rx="18" ry="13"/>
+          </g>
+
+          <g class="organ" data-organ="lungs" tabindex="0" role="button" aria-label="Lungs">
+            <title>Lungs</title>
+            <path d="M94 98 Q78 96 74 120 Q71 146 78 150 Q92 150 94 140 Z"/>
+            <path d="M106 98 Q122 96 126 120 Q129 146 122 150 Q108 150 106 140 Z"/>
+          </g>
+
+          <!-- Heart is drawn after the lungs so it sits on top of them -->
+          <g class="organ" data-organ="heart" tabindex="0" role="button" aria-label="Heart">
+            <title>Heart</title>
+            <path d="M105 139 C88 127 94 112 105 122 C116 112 122 127 105 139 Z"/>
+          </g>
+
+          <!-- Muscles are shown as the two upper-arm muscles -->
+          <g class="organ" data-organ="muscles" tabindex="0" role="button" aria-label="Muscles">
+            <title>Muscles</title>
+            <ellipse cx="46" cy="118" rx="7" ry="20" transform="rotate(6 46 82)"/>
+            <ellipse cx="154" cy="118" rx="7" ry="20" transform="rotate(-6 154 82)"/>
+          </g>
+
+          <!-- Bones are shown as the two thigh bones -->
+          <g class="organ" data-organ="bones" tabindex="0" role="button" aria-label="Bones">
+            <title>Bones</title>
+            <path d="M79.5 251 a6.5 6.5 0 1 1 8 0 V311 a6.5 6.5 0 1 1 -8 0 Z"/>
+            <path d="M112.5 251 a6.5 6.5 0 1 1 8 0 V311 a6.5 6.5 0 1 1 -8 0 Z"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- Details for the selected organ (filled in by JavaScript) -->
+      <aside id="organ-details" class="organ-details" aria-live="polite">
+        <h3 id="organ-name">Select an organ</h3>
+        <p id="organ-description">No organ selected yet.</p>
+        <p id="organ-hazard" class="hint"></p>
+        <ul id="organ-readings" class="status-list"></ul>
+      </aside>
+    </section>
+
+    <!-- ===================== INPUT FORM ===================== -->
+    <!-- min/max below only reject impossible typing mistakes.
+         They are NOT medical limits - those live in js/thresholds.js. -->
+    <section class="panel form-panel" aria-labelledby="form-title">
+      <h2 id="form-title">Daily Check-in</h2>
+
+      <form id="vitals-form" novalidate>
+
+        <fieldset>
+          <legend>Core readings</legend>
+
+          <label for="heart-rate">Heart rate (bpm)</label>
+          <input type="number" id="heart-rate" name="heartRate"
+                 min="20" max="250" step="1" required>
+
+          <!-- Blood pressure has two numbers, so it gets two inputs -->
+          <label for="bp-systolic">Blood pressure (mmHg)</label>
+          <div class="bp-group">
+            <input type="number" id="bp-systolic" name="bpSystolic"
+                   min="50" max="260" step="1" placeholder="systolic" required>
+            <span aria-hidden="true">/</span>
+            <input type="number" id="bp-diastolic" name="bpDiastolic"
+                   min="30" max="160" step="1" placeholder="diastolic" required>
+          </div>
+
+          <label for="glucose">Blood glucose (mg/dL)</label>
+          <input type="number" id="glucose" name="glucose"
+                 min="20" max="600" step="1" required>
+
+          <label for="temperature">Body temperature (°C)</label>
+          <input type="number" id="temperature" name="temperature"
+                 min="30" max="45" step="0.1" required>
+
+          <label for="sleep">Sleep last night (hours)</label>
+          <input type="number" id="sleep" name="sleep"
+                 min="0" max="24" step="0.5" required>
+
+          <!-- Mood: 1 = very low, 5 = very good -->
+          <label for="mood">Mood (1-5)</label>
+          <select id="mood" name="mood" required>
+            <option value="">-- choose --</option>
+            <option value="1">1 - Very low</option>
+            <option value="2">2 - Low</option>
+            <option value="3">3 - Okay</option>
+            <option value="4">4 - Good</option>
+            <option value="5">5 - Very good</option>
+          </select>
+        </fieldset>
+
+        <!-- Optional readings are hidden in a collapsible block -->
+        <details>
+          <summary>Optional readings</summary>
+          <fieldset>
+            <legend class="visually-hidden">Optional readings</legend>
+
+            <label for="spo2">Oxygen saturation SpO₂ (%)</label>
+            <input type="number" id="spo2" name="spo2"
+                   min="50" max="100" step="1">
+
+            <label for="weight">Body weight (kg)</label>
+            <input type="number" id="weight" name="weight"
+                   min="20" max="250" step="0.1">
+
+            <label for="exercise">Exercise today (minutes)</label>
+            <input type="number" id="exercise" name="exercise"
+                   min="0" max="600" step="5">
+          </fieldset>
+        </details>
+
+        <div class="form-actions">
+          <button type="submit">Save check-in</button>
+          <button type="reset">Clear</button>
+        </div>
+      </form>
+
+      <!-- Tools for the demo: simulated data and deleting the history -->
+      <div class="data-actions">
+        <button type="button" id="load-sample" class="secondary">Load sample data</button>
+        <button type="button" id="clear-history" class="secondary">Clear history</button>
+      </div>
+
+      <p id="sample-banner" class="notice" hidden>
+        Showing SIMULATED sample data (invented for the demo, not real astronaut data).
+      </p>
+      <p id="storage-warning" class="notice" hidden>
+        This browser is not saving data. Check-ins will be lost when the page closes.
+      </p>
+    </section>
+
+    <!-- ===================== STATUS PANEL ===================== -->
+    <section class="panel status-panel" aria-labelledby="status-title">
+      <h2 id="status-title">Health Status</h2>
+
+      <!-- Overall result: green / yellow / red (set by JavaScript) -->
+      <div id="overall-status" class="overall-status" aria-live="polite">
+        <span class="status-label">No data yet</span>
+      </div>
+
+      <!-- One row per reading with its color and short comment -->
+      <ul id="status-list" class="status-list">
+        <!-- Filled in by JavaScript -->
+      </ul>
+
+      <!-- Suggested actions for the astronaut -->
+      <div id="guidance" class="guidance">
+        <h3>Suggested actions</h3>
+        <ul id="guidance-list">
+          <!-- Filled in by JavaScript -->
+        </ul>
+      </div>
+
+      <!-- Shown only when a reading is red: notify flight surgeons on Earth -->
+      <div id="ground-alert" class="ground-alert" role="alert" hidden>
+        <strong>Notify ground medical team.</strong>
+        <span id="ground-alert-reason"></span>
+      </div>
+    </section>
+
+    <!-- ===================== TRENDS CHART ===================== -->
+    <section class="panel chart-panel" aria-labelledby="chart-title">
+      <h2 id="chart-title">Trends Over Time</h2>
+
+      <label for="chart-metric">Show:</label>
+      <select id="chart-metric">
+        <option value="heartRate">Heart rate</option>
+        <option value="bloodPressure">Blood pressure</option>
+        <option value="glucose">Blood glucose</option>
+        <option value="temperature">Temperature</option>
+        <option value="sleep">Sleep</option>
+        <option value="mood">Mood</option>
+        <option value="spo2">SpO₂</option>
+        <option value="weight">Weight</option>
+        <option value="exercise">Exercise</option>
+      </select>
+
+      <!-- Shown instead of the chart when there is nothing to draw -->
+      <p id="chart-message" class="hint" hidden></p>
+
+      <!-- Chart.js will draw on this canvas -->
+      <div class="chart-wrapper">
+        <canvas id="trend-chart" aria-label="Trend chart of the selected reading" role="img"></canvas>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="app-footer">
+    <p><strong>Disclaimer:</strong> AstroVitals supports self-assessment only.
+       It does not diagnose any condition. Always follow the mission medical team.</p>
+    <p>Based on the five hazards of human spaceflight described by the
+       NASA Human Research Program: Radiation, Isolation &amp; confinement,
+       Distance from Earth, Gravity fields, Hostile closed environment.</p>
+    <details class="sources">
+      <summary>Sources for the reference ranges</summary>
+      <ul id="sources-list"></ul>
+    </details>
+    <p>Open source under the MIT License. Data is stored only in this browser.</p>
+  </footer>
+
+  <!-- Chart.js 4.4.1 (MIT License) from cdnjs - https://www.chartjs.org/ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
+
+  <!-- Our scripts. Classic scripts (not ES modules), so the app also works
+       when index.html is opened directly from disk (file://).
+       "defer" = run in this order, after the HTML is ready. -->
+  <script src="js/thresholds.js" defer></script>
+  <script src="js/storage.js" defer></script>
+  <script src="js/evaluate.js" defer></script>
+  <script src="js/body-map.js" defer></script>
+  <script src="js/charts.js" defer></script>
+  <script src="js/app.js" defer></script>
+</body>
+</html>
